@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.31.1"}
+pydantic = {extras = ["email"], version = "^2.9.2"}
+pydantic-settings = "^2.5.2"
 
 
 [build-system]

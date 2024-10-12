@@ -1,22 +1,35 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 
 from config.config import settings
+from config.database import db_helper
 
 from queries import router as queries_router
 from users import router as users_router
 
-app = FastAPI(
-    title="Cadastre API"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    yield
+    # shutdown
+    await db_helper.dispose()
+
+
+main_app = FastAPI(
+    title="Cadastre API",
+    lifespan=lifespan
 )
 
-app.include_router(queries_router)
-app.include_router(users_router)
+main_app.include_router(queries_router)
+main_app.include_router(users_router)
 
 
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
+        "main:main_app",
         host=settings.run.host,
         port=settings.run.port,
         reload=True)

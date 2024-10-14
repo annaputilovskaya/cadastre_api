@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -11,13 +11,15 @@ class Token(BaseModel):
     """
     Model for describing JWT tokens.
     """
+
     access_token: str
     refresh_token: str
-    token_type: str = 'Bearer'
+    token_type: str = "Bearer"
 
 
 class RefreshToken(BaseModel):
     """
     Model for describing JWT tokens for refresh tokens.
     """
+
     refresh_token: str

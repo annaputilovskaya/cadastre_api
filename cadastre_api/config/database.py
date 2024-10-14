@@ -1,19 +1,19 @@
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker, AsyncSession
-
 from config.config import settings
+from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
+                                    async_sessionmaker, create_async_engine)
 
 
 class DatabaseHelper:
     def __init__(
-            self,
-            url: str,
-            echo: bool = False,
-            echo_pool: bool = False,
-            pool_pre_ping: bool = True,
-            pool_size: int = 50,
-            max_overflow: int = 10
+        self,
+        url: str,
+        echo: bool = False,
+        echo_pool: bool = False,
+        pool_pre_ping: bool = True,
+        pool_size: int = 50,
+        max_overflow: int = 10,
     ):
         self.engine: AsyncEngine = create_async_engine(
             url=url,
@@ -37,12 +37,12 @@ class DatabaseHelper:
         async with self.session_factory() as session:
             yield session
 
+
 db_helper = DatabaseHelper(
     url=str(settings.db.url),
     echo=settings.db.echo,
     echo_pool=settings.db.echo_pool,
     pool_pre_ping=settings.db.pool_pre_ping,
     pool_size=settings.db.pool_size,
-    max_overflow=settings.db.max_overflow
-
+    max_overflow=settings.db.max_overflow,
 )

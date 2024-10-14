@@ -1,11 +1,6 @@
-__all__ = (
-    "db_helper",
-    "Base",
-    "User",
-    "Query"
-)
+__all__ = ("db_helper", "Base", "User", "Query")
 
-from config.database import db_helper
 from config.base import Base
-from users.models import User
+from config.database import db_helper
 from queries.models import Query
+from users.models import User

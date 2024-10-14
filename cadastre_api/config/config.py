@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from pydantic import PostgresDsn
-from pydantic_settings import  BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+MINUTES = 10
+REFRESH_MINUTES = 30
 
 
 class RunConfig(BaseModel):
@@ -25,14 +27,20 @@ class DatabaseConfig(BaseModel):
     }
 
 
+class AuthConfig(BaseModel):
+    secret: str
+    algorithm: str
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_nested_delimiter="__",
         env_file=".env",
     )
-    run:  RunConfig = RunConfig()
+    run: RunConfig = RunConfig()
     db: DatabaseConfig
+    auth: AuthConfig
 
 
 settings = Settings()

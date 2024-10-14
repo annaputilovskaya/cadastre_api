@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -6,8 +7,8 @@ from fastapi import FastAPI
 from config.config import settings
 from config.database import db_helper
 
-from queries import router as queries_router
-from users import router as users_router
+from queries.routers import router as queries_router
+from users.routers import router as users_router
 
 
 @asynccontextmanager

@@ -1,32 +1,30 @@
 import os
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import Callable, Union
 
-from passlib.context import CryptContext
-
 import jwt
+from config import db_helper
+from config.config import MINUTES
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-
+from passlib.context import CryptContext
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-
-from config import db_helper
+from sqlalchemy.ext.asyncio import AsyncSession
 from users.models import User
 from users.schemas import UserCreate
 
 load_dotenv()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def hash_password(password: str) -> str:
     """
     Hashes a password using bcrypt.
     """
-    pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     return pwd_context.hash(password)
 
 
@@ -38,8 +36,8 @@ async def create_user(user: UserCreate, db: AsyncSession):
     db_user = User(
         username=user.username,
         email=user.email,
-        password=hashed_password,
-        is_admin=False
+        hashed_password=hashed_password,
+        is_admin=False,
     )
     db.add(db_user)
     try:
@@ -50,20 +48,21 @@ async def create_user(user: UserCreate, db: AsyncSession):
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"message": "User already exists"}
+            detail={"message": "User already exists"},
         )
 
 
-async def get_user_by_id(user_id: int, db: AsyncSession):
+async def get_user_by_username(username: str, db: AsyncSession):
     """
-    Get user data by user ID.
+    Get user data by user username.
     """
-    query = await db.execute(select(User).where(User.id == user_id))
-    db_user = query.scalars().first()
+    stmt = select(User).filter(User.username == username)
+    db_users = await db.scalars(stmt)
+    db_user = db_users.first()
     if db_user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found")
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     return db_user
 
 
@@ -76,14 +75,16 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=float(os.getenv('MINUTES')))
-        to_encode.update({'exp': expire})
-        encoded_jwt = jwt.encode(to_encode, os.getenv('SECRET_KEY'), algorithm=os.getenv('ALGORITHM'))
+            expire = datetime.utcnow() + timedelta(minutes=float(MINUTES))
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(
+            to_encode, os.getenv("SECRET"), algorithm=os.getenv("ALGORITHM")
+        )
         return encoded_jwt
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Token creating error"}
+            detail={"message": "Token creating error"},
         )
 
 
@@ -97,52 +98,62 @@ def create_refresh_token(data: dict, expires_delta: timedelta = None) -> str:
             expire = datetime.utcnow() + expires_delta
         else:
             expire = datetime.utcnow() + timedelta(minutes=15)
-        to_encode.update({'exp': expire})
-        encoded_jwt = jwt.encode(to_encode, os.getenv('SECRET_KEY'), algorithm=os.getenv('ALGORITHM'))
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(
+            to_encode, os.getenv("SECRET"), algorithm=os.getenv("ALGORITHM")
+        )
         return encoded_jwt
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Token creating error"}
+            detail={"message": "Token creating error"},
         )
+
 
 def verify_password(plain_password, hashed_password) -> bool:
     """
     Verify password against hashed password.
     """
-    pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def authenticate_user(user: Callable, user_id: str, password: str, db: AsyncSession) -> Union[User, bool]:
+async def authenticate_user(
+    user: Callable, user_id: str, password: str, db: AsyncSession
+) -> Union[User, bool]:
     """
     User authentication method for authenticating.
     """
     user = await user(user_id, db)
     if not user:
         return False
-    if not verify_password(password, user.password):
+    if not verify_password(password, user.hashed_password):
         return False
     return user
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(db_helper.session_getter)) -> User:
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(db_helper.session_getter),
+) -> User:
     """
     Uses OAuth2PasswordBearer to authenticate a user.
     """
     exception = HTTPException(
         status_code=401,
-        detail='Не удалось подтвердить подлинность токена',
-        headers={'WWW-Authenticate': 'Bearer'},
+        detail="Не удалось подтвердить подлинность токена",
+        headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        decoded_jwt = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=[os.getenv('ALGORITHM')])
-        email = decoded_jwt.get('sub')
-        if email is None:
+        decoded_jwt = jwt.decode(
+            token, os.getenv("SECRET"), algorithms=[os.getenv("ALGORITHM")]
+        )
+        username = decoded_jwt.get("sub")
+        if username is None:
             raise exception
     except jwt.PyJWTError:
         raise exception
-    user = await get_user_by_id(email, db)
+    user = await get_user_by_username(username, db)
     if user is None:
         raise exception
     return user
@@ -154,5 +165,3 @@ async def validate_token(db: AsyncSession, token: str = Depends(oauth2_scheme)):
     """
     user = await get_current_user(token, db)
     return user
-
-
